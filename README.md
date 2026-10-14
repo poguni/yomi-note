@@ -13,6 +13,7 @@
 | 일본어 읽어 주기(TTS) | 본문 전체(읽는 문장 강조), 단어, 문장, 단어장 목록 읽기. 속도 조절과 음성 선택 |
 | 한자 카드 | 획순 애니메이션(KanjiVG), 음독·훈독·뜻·획수·학년, 그 한자가 들어간 단어. “지금 읽는 글 / 단어장 / JLPT 전체” + JLPT 급수 필터 |
 | 읽기 속도 기록 | 읽기 시작 → 다 읽었어요로 분당 글자 수를 기록하고 그래프로 보여 줍니다. |
+| 테마 | 오른쪽 위에서 라이트 모드 / 다크 모드를 고를 수 있고, 선택은 브라우저에 저장됩니다. |
 | 내보내기 | 엑셀(.xlsx, 단어·한자 시트), 워드(.docx), PDF(인쇄 → “PDF로 저장”), CSV, 본문(후리가나 포함) PDF |
 | 백업·복원 | 전체 데이터를 JSON 파일로 저장하고 다른 브라우저에서 불러올 수 있습니다. |
 
@@ -21,24 +22,40 @@
 사전 파일을 `fetch`로 불러오므로 `index.html`을 더블클릭(file://)하면 동작하지 않습니다. 간단한 웹 서버로 여세요.
 
 ```bash
-cd yomi-note
+# 저장소 루트(index.html이 있는 폴더)에서
 python3 -m http.server 8000
 # 브라우저에서 http://localhost:8000
 ```
 
 ## GitHub Pages로 배포하기
 
-1. 이 저장소를 GitHub에 푸시합니다.
-2. 저장소 **Settings → Pages**에서 *Source*를 `Deploy from a branch`, 브랜치를 `main`(루트 `/`)으로 지정합니다.
-3. 잠시 후 `https://<아이디>.github.io/<저장소 이름>/yomi-note/` 에서 열립니다.
+이 폴더의 내용을 새 저장소의 **루트**에 그대로 올리는 것을 기준으로 합니다.
 
-처음 열 때 형태소 사전(약 18MB)을 내려받으며, 이후에는 브라우저 캐시를 사용합니다.
+1. GitHub에서 새 저장소를 만듭니다. (예: `yomi-note`)
+2. 파일을 올립니다. 파일 수가 많으니 웹 업로드보다 git 명령을 권장합니다.
+
+   ```bash
+   git init
+   git add -A
+   git commit -m "요미노트 첫 업로드"
+   git branch -M main
+   git remote add origin https://github.com/<아이디>/<저장소 이름>.git
+   git push -u origin main
+   ```
+
+3. 저장소 **Settings → Pages**에서 *Source*를 `Deploy from a branch`, 브랜치를 `main` / `/ (root)`로 지정하고 저장합니다.
+4. 1~2분 뒤 `https://<아이디>.github.io/<저장소 이름>/` 에서 열립니다. (예: `https://<아이디>.github.io/yomi-note/`)
+
+- 저장소 이름을 `<아이디>.github.io`로 만들면 주소가 `https://<아이디>.github.io/` 가 됩니다.
+- `.nojekyll` 파일은 GitHub Pages가 파일을 가공하지 않고 그대로 제공하게 해 주므로 지우지 마세요.
+- 처음 열 때 형태소 사전(약 18MB)을 내려받으며, 이후에는 브라우저 캐시를 사용합니다.
 
 ## 폴더 구조
 
 ```
-yomi-note/
+(저장소 루트)
 ├── index.html
+├── .nojekyll
 ├── css/style.css
 ├── js/
 │   ├── app.js        # 화면과 이벤트
@@ -65,7 +82,7 @@ for n in 1 2 3 4 5; do curl -sLO https://raw.githubusercontent.com/jamsinclair/o
 curl -sLO https://raw.githubusercontent.com/davidluzgouveia/kanji-data/master/kanji.json
 
 # 빌드 (JMdict는 선택)
-cd <저장소>/yomi-note
+cd <저장소 루트>
 node tools/build-data.mjs --jlpt /tmp/yomi --kanji /tmp/yomi/kanji.json [--jmdict /tmp/yomi/jmdict-eng-common-x.y.z.json]
 ```
 

@@ -682,8 +682,16 @@ function fillVoices(voices) {
 }
 
 // ---------------------------------------------------------------- 설정
+function applyTheme(theme) {
+  const t = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = t;
+  $('#opt-theme').value = t;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'dark' ? '#1c1a18' : '#f6f2ea');
+}
+
 function applySettingsToUi() {
   const s = store.settings;
+  applyTheme(s.theme);
   $('#opt-furigana').checked = s.furigana;
   $('#opt-furigana-level').value = String(s.furiganaLevel);
   $('#opt-highlight').checked = s.highlight;
@@ -722,6 +730,15 @@ function readAll() {
 // ---------------------------------------------------------------- 이벤트 연결
 function bind() {
   $$('.tabs [role="tab"]').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  $('[data-tab-link]').addEventListener('click', (e) => {
+    e.preventDefault();
+    showTab(e.currentTarget.dataset.tabLink);
+  });
+  $('#opt-theme').addEventListener('change', (e) => {
+    store.settings.theme = e.target.value;
+    store.save('settings');
+    applyTheme(e.target.value);
+  });
 
   $('#btn-analyze').addEventListener('click', runAnalysis);
   $('#source-text').addEventListener('keydown', (e) => {

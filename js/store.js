@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS = {
   fontSize: 22,
   rate: 1,
   voice: '',
+  theme: 'light',
 };
 
 export const store = {
