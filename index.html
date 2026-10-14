@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>요미노트 YomiNote</title>
+  <meta name="description" content="일본어 글을 붙여 넣으면 후리가나와 단어 뜻을 보여 주고, 나만의 단어장을 만드는 학습기">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23b4483c'/%3E%3Ctext x='32' y='45' font-size='34' text-anchor='middle' fill='white' font-family='sans-serif'%3E読%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">読</span>
+      <div>
+        <h1>요미노트 <small>YomiNote</small></h1>
+        <p class="tagline">붙여 넣고, 읽고, 모르는 말은 내 단어장으로</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="reader" aria-selected="true">📖 읽기</button>
+      <button role="tab" data-tab="vocab" aria-selected="false">🗂️ 단어장 <span class="count" id="vocab-count">0</span></button>
+      <button role="tab" data-tab="kanji" aria-selected="false">漢 한자 카드</button>
+      <button role="tab" data-tab="speed" aria-selected="false">⏱️ 읽기 기록</button>
+      <button role="tab" data-tab="data" aria-selected="false">💾 데이터</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ================= 읽기 ================= -->
+    <section class="panel" id="tab-reader" role="tabpanel">
+      <div class="input-area" id="input-area">
+        <label for="source-text" class="label">일본어 글 붙여 넣기</label>
+        <textarea id="source-text" rows="6" placeholder="여기에 일본어 문장을 붙여 넣으세요. 예) 吾輩は猫である。名前はまだ無い。"></textarea>
+        <div class="row">
+          <button class="btn primary" id="btn-analyze">분석하기</button>
+          <button class="btn" id="btn-sample">예문 넣기</button>
+          <button class="btn ghost" id="btn-clear">지우기</button>
+          <span class="status" id="analyzer-status">형태소 사전 준비 중…</span>
+        </div>
+      </div>
+
+      <div class="toolbar" id="reader-toolbar" hidden>
+        <div class="tool-group">
+          <label class="switch"><input type="checkbox" id="opt-furigana" checked><span>후리가나</span></label>
+          <select id="opt-furigana-level" title="후리가나를 표시할 한자 범위">
+            <option value="0">모든 단어에 표시</option>
+            <option value="5">N5 단어는 숨기기</option>
+            <option value="4">N4까지 숨기기</option>
+            <option value="3">N3까지 숨기기</option>
+            <option value="2">N2까지 숨기기</option>
+          </select>
+          <label class="switch"><input type="checkbox" id="opt-highlight" checked><span>단어장 단어 강조</span></label>
+          <label class="inline">글자 <input type="range" id="opt-size" min="16" max="34" value="22"></label>
+        </div>
+        <div class="tool-group">
+          <button class="btn" id="btn-tts-all">🔊 전체 읽기</button>
+          <button class="btn" id="btn-tts-stop" disabled>■ 정지</button>
+          <label class="inline">속도 <input type="range" id="opt-rate" min="0.5" max="1.5" step="0.1" value="1"><output id="rate-out">1.0</output></label>
+          <select id="opt-voice" title="일본어 음성"></select>
+        </div>
+        <div class="tool-group">
+          <button class="btn" id="btn-timer">⏱️ 읽기 시작</button>
+          <span class="timer" id="timer-display" hidden>00:00</span>
+          <button class="btn ghost" id="btn-timer-cancel" hidden>취소</button>
+          <button class="btn ghost" id="btn-edit">✏️ 글 수정</button>
+          <button class="btn ghost" id="btn-print-text">🖨️ 본문 PDF</button>
+        </div>
+      </div>
+
+      <div class="reader-layout">
+        <article class="reader" id="reader" lang="ja" aria-live="polite"></article>
+        <aside class="word-panel" id="word-panel" hidden></aside>
+      </div>
+      <p class="hint" id="reader-hint" hidden>단어를 누르면 읽기·뜻·JLPT 급수를 볼 수 있어요. 한자를 눌러 카드도 열어 보세요.</p>
+    </section>
+
+    <!-- ================= 단어장 ================= -->
+    <section class="panel" id="tab-vocab" role="tabpanel" hidden>
+      <div class="subtabs">
+        <button class="subtab active" data-sub="words">단어 <span id="cnt-words">0</span></button>
+        <button class="subtab" data-sub="kanji">한자 <span id="cnt-kanji">0</span></button>
+      </div>
+      <div class="filters">
+        <input type="search" id="vocab-search" placeholder="검색 (표기·읽기·뜻·메모)">
+        <select id="vocab-jlpt">
+          <option value="">JLPT 전체</option>
+          <option value="5">N5</option><option value="4">N4</option><option value="3">N3</option>
+          <option value="2">N2</option><option value="1">N1</option><option value="0">급외</option>
+        </select>
+        <select id="vocab-status">
+          <option value="">상태 전체</option>
+          <option value="learning">외우는 중</option>
+          <option value="known">외웠어요</option>
+        </select>
+        <select id="vocab-sort">
+          <option value="new">최근 추가순</option>
+          <option value="old">오래된 순</option>
+          <option value="kana">읽기순(あいう)</option>
+          <option value="jlpt">JLPT 쉬운 순</option>
+        </select>
+      </div>
+      <details class="add-form">
+        <summary>＋ 직접 추가하기</summary>
+        <form id="manual-add" autocomplete="off">
+          <input name="word" placeholder="표기 (예: 勉強 / 漢)" required>
+          <input name="reading" placeholder="읽기 (예: べんきょう)">
+          <input name="ko" placeholder="한국어 뜻">
+          <input name="en" placeholder="영어 뜻 (선택)">
+          <button class="btn primary" type="submit">추가</button>
+        </form>
+      </details>
+      <div class="export-bar">
+        <span class="label">내보내기</span>
+        <select id="export-scope" title="내보낼 범위">
+          <option value="all">단어 + 한자 전체</option>
+          <option value="current">지금 보이는 목록만</option>
+        </select>
+        <button class="btn" data-export="xlsx">📊 엑셀</button>
+        <button class="btn" data-export="docx">📝 워드</button>
+        <button class="btn" data-export="pdf">📄 PDF</button>
+        <button class="btn ghost" data-export="csv">CSV</button>
+        <button class="btn ghost" id="btn-tts-vocab">🔊 목록 읽기</button>
+      </div>
+      <div id="vocab-list" class="vocab-list"></div>
+    </section>
+
+    <!-- ================= 한자 카드 ================= -->
+    <section class="panel" id="tab-kanji" role="tabpanel" hidden>
+      <div class="filters">
+        <select id="kanji-source">
+          <option value="text">지금 읽는 글의 한자</option>
+          <option value="vocab">단어장의 한자</option>
+          <option value="all">JLPT 한자 전체</option>
+        </select>
+        <div class="chips" id="kanji-levels">
+          <button class="chip active" data-level="">전체</button>
+          <button class="chip" data-level="5">N5</button>
+          <button class="chip" data-level="4">N4</button>
+          <button class="chip" data-level="3">N3</button>
+          <button class="chip" data-level="2">N2</button>
+          <button class="chip" data-level="1">N1</button>
+          <button class="chip" data-level="0">급외</button>
+        </div>
+        <input type="search" id="kanji-search" placeholder="한자·읽기·뜻 검색">
+      </div>
+      <p class="hint" id="kanji-summary"></p>
+      <div class="kanji-grid" id="kanji-grid"></div>
+    </section>
+
+    <!-- ================= 읽기 기록 ================= -->
+    <section class="panel" id="tab-speed" role="tabpanel" hidden>
+      <div class="stats" id="speed-stats"></div>
+      <div class="chart" id="speed-chart"></div>
+      <table class="table" id="speed-table">
+        <thead><tr><th>날짜</th><th>글</th><th>글자 수</th><th>걸린 시간</th><th>속도(자/분)</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="hint">읽기 탭에서 <b>⏱️ 읽기 시작</b> → 다 읽은 뒤 <b>다 읽었어요</b>를 누르면 기록됩니다. 글자 수는 공백·줄바꿈을 뺀 문자 수입니다.</p>
+    </section>
+
+    <!-- ================= 데이터 ================= -->
+    <section class="panel" id="tab-data" role="tabpanel" hidden>
+      <div class="card-box">
+        <h2>백업과 복원</h2>
+        <p>모든 데이터(단어장·읽기 기록·설정)는 이 브라우저의 <b>localStorage</b>에만 저장됩니다. 브라우저 데이터를 지우거나 다른 기기에서 쓰려면 백업 파일을 활용하세요.</p>
+        <div class="row">
+          <button class="btn primary" id="btn-backup">⬇️ 백업 파일(JSON) 저장</button>
+          <label class="btn">⬆️ 백업 불러오기<input type="file" id="file-restore" accept="application/json,.json" hidden></label>
+        </div>
+        <p class="hint" id="storage-usage"></p>
+      </div>
+      <div class="card-box">
+        <h2>음성(TTS) 확인</h2>
+        <p id="voice-info"></p>
+        <div class="row">
+          <input id="tts-test" value="こんにちは。今日もいい天気ですね。" lang="ja">
+          <button class="btn" id="btn-tts-test">🔊 들어 보기</button>
+        </div>
+      </div>
+      <div class="card-box danger">
+        <h2>초기화</h2>
+        <p>단어장과 읽기 기록을 모두 지웁니다. 되돌릴 수 없으니 먼저 백업하세요.</p>
+        <button class="btn danger" id="btn-reset">모든 데이터 지우기</button>
+      </div>
+      <div class="card-box">
+        <h2>데이터 출처</h2>
+        <ul class="credits">
+          <li>형태소 분석: <a href="https://github.com/takuyaa/kuromoji.js" target="_blank" rel="noopener">kuromoji.js</a> (Apache-2.0, IPADIC)</li>
+          <li>단어 뜻·JLPT: <a href="https://github.com/jamsinclair/open-anki-jlpt-decks" target="_blank" rel="noopener">open-anki-jlpt-decks</a> (MIT, JMdict 기반)</li>
+          <li>한자 정보: <a href="https://github.com/davidluzgouveia/kanji-data" target="_blank" rel="noopener">kanji-data</a> (MIT) · <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noopener">KANJIDIC2</a> (CC BY-SA 4.0, EDRDG)</li>
+          <li>획순: <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noopener">KanjiVG</a> (CC BY-SA 3.0, Ulrich Apel) — 카드를 열 때 GitHub에서 불러옵니다.</li>
+          <li>엑셀: <a href="https://sheetjs.com/" target="_blank" rel="noopener">SheetJS</a> (Apache-2.0) · 워드: <a href="https://docx.js.org/" target="_blank" rel="noopener">docx</a> (MIT)</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- 한자 카드 모달 -->
+  <dialog id="kanji-dialog" class="kanji-dialog">
+    <div id="kanji-dialog-body"></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="vendor/kuromoji/kuromoji.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
